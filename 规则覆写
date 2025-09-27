@@ -1,0 +1,443 @@
+/** 
+ * Clash-Verge-Rev 全局扩展脚本（适配“HK-BEUP® ISP”主选择器 + blackmatrix7 常用规则 + Loyalsoldier 通用规则）
+ * Version 1.3-adapt-merge-plus
+ * 变更说明（仅新增，不改动原有逻辑）：
+ * - 增加 Loyalsoldier 规则集（icloud、apple、google、tld-not-cn、telegramcidr），规则指派保持你现有策略意图
+ * - 保留此前 blackmatrix7 常用服务集合，全部走 “HK-BEUP® ISP”
+ * - DNS 增强：为 geosite:cn,private,apple 配置国内 DoH，广告集合直接返回 success，减少污染与泄露
+ */
+
+// ===================================================================================
+// 1. 自定义规则和过滤节点（原样保留）
+// ===================================================================================
+const EXCLUDED_KEYWORDS = [
+  '官网', '到期', '流量', '剩余', '时间', '重置', '订阅', '卡顿',
+  '距离下次重置剩余', '套餐到期', '导航'
+];
+
+const CustomizationRule = [
+  "DOMAIN-SUFFIX,jetbrains.ai,HK-BEUP® ISP",
+  "PROCESS-NAME,tailscaled,DIRECT",
+  "PROCESS-NAME,tailscaled.exe,DIRECT",
+  "DOMAIN-SUFFIX,mcdn.bilivideo.com,REJECT",
+  "DOMAIN-SUFFIX,mcdn.bilivideo.cn,REJECT",
+  "DOMAIN-SUFFIX,szbdyd.com,REJECT",
+];
+
+// ===================================================================================
+// 2. 自定义链接代理落地节点（原样保留）
+// ===================================================================================
+const chainTransitName = "链式中转";
+const chainLandingProxies = [
+  // 留空即不启用链式
+];
+
+// ===================================================================================
+// 3. 服务模块化配置区（原样保留）
+// ===================================================================================
+const ENABLED_SERVICES = {
+  openai: {
+    enabled: true,
+    allowDirect: false,
+    groupName: "ChatGPT",
+    icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/chatgpt.svg",
+    regions: ["US"],
+    rule: {
+      providerKey: "openai",
+      url: "https://fastly.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/OpenAI/OpenAI.yaml"
+    }
+  },
+  anthropic: {
+    enabled: true,
+    allowDirect: false,
+    groupName: "Claude",
+    icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/claude.svg",
+    regions: ["US"],
+    rule: {
+      providerKey: "anthropic",
+      url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/anthropic.yaml"
+    }
+  },
+  telegram: {
+    enabled: true,
+    allowDirect: false,
+    groupName: "Telegram",
+    icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/telegram.svg",
+    regions: ["SG"],
+    rule: {
+      providerKey: "telegram",
+      url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Telegram/Telegram.yaml",
+      options: "no-resolve"
+    }
+  },
+  github: {
+    enabled: true,
+    allowDirect: false,
+    groupName: "Github",
+    icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/github.svg",
+    regions: ["HK"],
+    rule: {
+      providerKey: "github",
+      url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/github.yaml"
+    }
+  },
+  google: {
+    enabled: true,
+    allowDirect: false,
+    groupName: "Google",
+    icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/google.svg",
+    regions: ["US"],
+    rule: {
+      providerKey: "google",
+      url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Google/Google.yaml"
+    }
+  },
+  microsoft: {
+    enabled: true,
+    allowDirect: true,
+    groupName: "MicroSoft",
+    icon: "https://www.clashverge.dev/assets/icons/microsoft.svg",
+    regions: [],
+    rule: {
+      providerKey: "microsoft",
+      url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Microsoft/Microsoft.yaml"
+    }
+  },
+  apple: {
+    enabled: true,
+    allowDirect: true,
+    groupName: "Apple",
+    icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/apple.svg",
+    regions: [],
+    rule: {
+      providerKey: "apple",
+      url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Apple/Apple_Classical.yaml"
+    }
+  },
+  netflix: {
+    enabled: true,
+    allowDirect: false,
+    groupName: "Netflix",
+    icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/netflix.svg",
+    regions: ["HK"],
+    rule: {
+      providerKey: "netflix",
+      url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Netflix/Netflix_Classical.yaml"
+    }
+  }
+};
+
+// ===================================================================================
+// 4. 区域枚举（原样保留）
+// ===================================================================================
+const REGIONS = {
+  HK: { name: "香港", regex: /香港|HK|Hong|🇭🇰/, icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/flags/hk.svg" },
+  TW: { name: "台湾", regex: /台湾|TW|Taiwan|Wan|🇨🇳|🇹🇼/, icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/flags/tw.svg" },
+  SG: { name: "新加坡", regex: /新加坡|狮城|SG|Singapore|🇸🇬/, icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/flags/sg.svg" },
+  JP: { name: "日本", regex: /日本|JP|Japan|🇯🇵/, icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/flags/jp.svg" },
+  US: { name: "美国", regex: /美国|US|United States|America|🇺🇸/, icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/flags/us.svg" },
+};
+
+// ===================================================================================
+// 5. 底层配置（原样保留 + 新增 providers 与 rules）
+// ===================================================================================
+const chainLandingName = "链式落地";
+const groupBaseOption = {
+  interval: 0,
+  timeout: 3000,
+  url: "http://www.gstatic.com/generate_204",
+  lazy: true,
+  "max-failed-times": 3,
+  hidden: false
+};
+
+const ruleProviderCommon = {
+  type: "http",
+  format: "yaml",
+  interval: 86400
+};
+
+// 你原有的静态 providers（Loyalsoldier 基础集）
+const staticRuleProviders = {
+  reject:       { ...ruleProviderCommon, behavior: "domain",   url: "https://fastly.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt", path: "./ruleset/loyalsoldier/reject.yaml" },
+  proxy:        { ...ruleProviderCommon, behavior: "domain",   url: "https://fastly.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/proxy.txt", path: "./ruleset/loyalsoldier/proxy.yaml" },
+  direct:       { ...ruleProviderCommon, behavior: "domain",   url: "https://fastly.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/direct.txt", path: "./ruleset/loyalsoldier/direct.yaml" },
+  cncidr:       { ...ruleProviderCommon, behavior: "ipcidr",   url: "https://fastly.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/cncidr.txt", path: "./ruleset/loyalsoldier/cncidr.yaml" },
+  lancidr:      { ...ruleProviderCommon, behavior: "ipcidr",   url: "https://fastly.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/lancidr.txt", path: "./ruleset/loyalsoldier/lancidr.yaml" },
+  applications: { ...ruleProviderCommon, behavior: "classical",url: "https://fastly.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/applications.txt", path: "./ruleset/loyalsoldier/applications.yaml" },
+  private:      { ...ruleProviderCommon, behavior: "domain",   url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/private.yaml", path: "./ruleset/MetaCubeX/private.yaml" },
+  gfw:          { ...ruleProviderCommon, behavior: "domain",   url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/gfw.yaml", path: "./ruleset/MetaCubeX/gfw.yaml" },
+};
+
+// 新增的 Loyalsoldier providers（仅新增，不改动原有）
+const lsExtraProviders = {
+  icloud:       { ...ruleProviderCommon, behavior: "domain",   url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/icloud.txt", path: "./ruleset/loyalsoldier/icloud.yaml" },
+  applecn:      { ...ruleProviderCommon, behavior: "domain",   url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/apple.txt", path: "./ruleset/loyalsoldier/apple.yaml" },
+  googled:      { ...ruleProviderCommon, behavior: "domain",   url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/google.txt", path: "./ruleset/loyalsoldier/google.yaml" },
+  tld_not_cn:   { ...ruleProviderCommon, behavior: "domain",   url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/tld-not-cn.txt", path: "./ruleset/loyalsoldier/tld-not-cn.yaml" },
+  telegramcidr: { ...ruleProviderCommon, behavior: "ipcidr",   url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/telegramcidr.txt", path: "./ruleset/loyalsoldier/telegramcidr.yaml" }
+};
+
+// blackmatrix7 常用服务（此前已合并，保留）
+const bmRuleProviders = {
+  youtube:    { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios_rule_script/master/rule/Clash/YouTube/YouTube.yaml" },
+  twitter:    { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios_rule_script/master/rule/Clash/Twitter/Twitter.yaml" },
+  tiktok:     { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios_rule_script/master/rule/Clash/TikTok/TikTok.yaml" },
+  discord:    { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios_rule_script/master/rule/Clash/Discord/Discord.yaml" },
+  wikipedia:  { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios_rule_script/master/rule/Clash/Wikipedia/Wikipedia.yaml" },
+  gitlab:     { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios_rule_script/master/rule/Clash/GitLab/GitLab.yaml" },
+  cloudflare: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios_rule_script/master/rule/Clash/Cloudflare/Cloudflare.yaml" },
+  paypal:     { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios_rule_script/master/rule/Clash/PayPal/PayPal.yaml" },
+  reddit:     { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios_rule_script/master/rule/Clash/Reddit/Reddit.yaml" },
+  spotify:    { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios_rule_script/master/rule/Clash/Spotify/Spotify.yaml" },
+  steam:      { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios_rule_script/master/rule/Clash/Steam/Steam.yaml" },
+  epic:       { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios_rule_script/master/rule/Clash/Epic/Epic.yaml" },
+  onedrive:   { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios_rule_script/master/rule/Clash/OneDrive/OneDrive.yaml" },
+  dropbox:    { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios_rule_script/master/rule/Clash/Dropbox/Dropbox.yaml" }
+};
+
+// 顶部与底部规则（原样保留）
+const staticRules = {
+  top: [
+    ...CustomizationRule,
+    "RULE-SET,applications,DIRECT",
+    "RULE-SET,private,DIRECT",
+    "RULE-SET,reject,广告过滤"
+  ],
+  bottom: [
+    "RULE-SET,proxy,HK-BEUP® ISP",
+    "RULE-SET,gfw,HK-BEUP® ISP",
+    "RULE-SET,direct,DIRECT,no-resolve",
+    "RULE-SET,lancidr,DIRECT,no-resolve",
+    "RULE-SET,cncidr,DIRECT,no-resolve",
+    "GEOIP,LAN,DIRECT,no-resolve",
+    "GEOIP,CN,DIRECT,no-resolve",
+    "MATCH,漏网之鱼"
+  ]
+};
+
+// ===================================================================================
+// DNS（对齐你基础配置，并追加 nameserver-policy 优化）
+// ===================================================================================
+const domesticNameservers = ["223.5.5.5", "119.29.29.29", "114.114.114.114"];
+const foreignNameservers  = ["1.1.1.1", "8.8.8.8", "8.8.4.4", "208.67.222.222", "9.9.9.9"];
+
+const dnsConfig = {
+  enable: true,
+  listen: "0.0.0.0:1053", // 若仅本机使用，建议改为 "127.0.0.1:1053"
+  secret: "K!c*ow9!@BgS!6Kw9r",
+  ipv6: false,
+  "prefer-h3": true,
+  "use-system-hosts": false,
+  "cache-algorithm": "arc",
+  "enhanced-mode": "fake-ip",
+  "fake-ip-range": "198.18.0.1/16",
+  "fake-ip-filter": [
+    "+.lan",
+    "+.local",
+    "+.msftconnecttest.com",
+    "+.msftncsi.com",
+    "localhost.ptlogin2.qq.com",
+    "localhost.sec.qq.com",
+    "localhost.work.weixin.qq.com"
+  ],
+  "default-nameserver": [ ...domesticNameservers ],
+  nameserver: [ ...domesticNameservers ],
+  "proxy-server-nameserver": [ ...domesticNameservers ],
+  "respect-rules": true,
+  // 追加：对 CN/私有/Apple 的解析指定国内 DoH；广告集合返回 success
+  "nameserver-policy": {
+    "geosite:cn,private,apple": [ "https://doh.pub/dns-query", "https://dns.alidns.com/dns-query" ],
+    "geosite:category-ads-all": "rcode://success"
+  }
+};
+
+// ===================================================================================
+// 工具函数（原样保留）
+// ===================================================================================
+function getNodeNames(allProxyNames, regionKeys = []) {
+  if (!regionKeys || regionKeys.length === 0) return allProxyNames;
+  const matchedProxies = new Set();
+  for (const key of regionKeys) {
+    const region = REGIONS[key];
+    if (region && region.regex) {
+      allProxyNames.forEach(proxyName => {
+        if (region.regex.test(proxyName)) matchedProxies.add(proxyName);
+      });
+    }
+  }
+  return Array.from(matchedProxies);
+}
+
+// ===================================================================================
+// 6. 程序主入口（保持原逻辑，仅新增 providers 合并与规则插入）
+// ===================================================================================
+function main(config) {
+  if ((config?.proxies?.length ?? 0) === 0 &&
+      (typeof config?.["proxy-providers"] === "object" ? Object.keys(config["proxy-providers"]).length : 0) === 0) {
+    throw new Error("配置文件中未找到任何代理");
+  }
+
+  const initialProxies = [ ...(config.proxies || []), ...chainLandingProxies ];
+  config.proxies = initialProxies.filter(p =>
+    !EXCLUDED_KEYWORDS.some(keyword => (p?.name || "").includes(keyword))
+  );
+  const allProxyNames = config.proxies.map(p => p.name);
+  const chainProxiesName = chainLandingProxies.map(p => p.name);
+
+  // 按地区生成组（原逻辑）
+  const manualRegionGroups = [];
+  const autoRegionGroups = [];
+  Object.keys(REGIONS).forEach(key => {
+    const nodesInRegion = getNodeNames(allProxyNames, [key]);
+    if (nodesInRegion.length > 0) {
+      manualRegionGroups.push({
+        ...groupBaseOption,
+        name: `${key}-手动选择`,
+        type: 'select',
+        proxies: nodesInRegion,
+        icon: REGIONS[key].icon
+      });
+      autoRegionGroups.push({
+        ...groupBaseOption,
+        name: `${key}-自动选择`,
+        type: 'url-test',
+        url: "http://www.gstatic.com/generate_204",
+        interval: 600,
+        tolerance: 100,
+        proxies: nodesInRegion,
+        hidden: true
+      });
+    }
+  });
+  const allManualRegionGroupNames = manualRegionGroups.map(g => g.name);
+  const allAutoRegionGroupNames = autoRegionGroups.map(g => g.name);
+
+  // 动态服务组与 providers（原逻辑）
+  const dynamicServiceGroups = [];
+  const dynamicRuleProviders = {};
+  const dynamicRules = [];
+
+  for (const serviceKey in ENABLED_SERVICES) {
+    const service = ENABLED_SERVICES[serviceKey];
+    if (!service.enabled) continue;
+
+    const availableProxies = ["HK-BEUP® ISP"];
+    if (service.allowDirect) availableProxies.unshift("DIRECT");
+
+    let hasSpecificRegions = service.regions && service.regions.length > 0;
+    let optionsFound = false;
+
+    if (hasSpecificRegions) {
+      const regionalNodes = getNodeNames(allProxyNames, service.regions);
+      service.regions.forEach(key => {
+        if (allManualRegionGroupNames.includes(`${key}-手动选择`)) {
+          availableProxies.push(`${key}-手动选择`);
+          optionsFound = true;
+        }
+      });
+      if (regionalNodes.length > 0) {
+        availableProxies.push(...regionalNodes);
+        optionsFound = true;
+      }
+      if (!optionsFound) hasSpecificRegions = false;
+    }
+    if (!hasSpecificRegions) {
+      availableProxies.push("手动选择", ...allProxyNames);
+    }
+
+    dynamicServiceGroups.push({
+      ...groupBaseOption,
+      name: service.groupName,
+      type: 'select',
+      proxies: [...new Set(availableProxies)],
+      icon: service.icon
+    });
+
+    dynamicRuleProviders[service.rule.providerKey] = {
+      ...ruleProviderCommon,
+      behavior: 'classical',
+      url: service.rule.url,
+      path: `./ruleset/generated/${service.rule.providerKey}.yaml`
+    };
+
+    let ruleString = `RULE-SET,${service.rule.providerKey},${service.groupName}`;
+    if (service.rule.options) ruleString += `,${service.rule.options}`;
+    dynamicRules.push(ruleString);
+  }
+
+  // 基础分流组（原逻辑）
+  const nodeSelectionProxies = ["手动选择", "延迟选优", "故障转移"];
+  if (chainLandingProxies && chainLandingProxies.length > 0) nodeSelectionProxies.push(chainLandingName);
+  nodeSelectionProxies.push(...allManualRegionGroupNames);
+
+  let baseProxyGroups = [
+    { ...groupBaseOption, name: "HK-BEUP® ISP", type: "select", proxies: nodeSelectionProxies, icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/adjust.svg" },
+    { ...groupBaseOption, name: "手动选择", type: "select", proxies: allProxyNames, icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/link.svg" },
+    { ...groupBaseOption, name: "延迟选优", type: "url-test", tolerance: 100, interval: 600, proxies: allProxyNames, icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/speed.svg" },
+    { ...groupBaseOption, name: "故障转移", type: "fallback", interval: 600, proxies: allProxyNames, icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/ambulance.svg" },
+    { ...groupBaseOption, name: "广告过滤", type: "select", proxies: ["REJECT", "DIRECT"], icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/bug.svg" },
+    { ...groupBaseOption, name: "漏网之鱼", type: "select", proxies: ["HK-BEUP® ISP", "DIRECT", ...allAutoRegionGroupNames], icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/fish.svg" },
+  ];
+  if (chainLandingProxies && chainLandingProxies.length > 0) {
+    baseProxyGroups.push(
+      { ...groupBaseOption, name: chainLandingName, type: "select", proxies: chainProxiesName, icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/adjust.svg" },
+      { ...groupBaseOption, name: chainTransitName, type: "select", proxies: allProxyNames.filter(p => !chainProxiesName.includes(p)), icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/adjust.svg" }
+    );
+  }
+
+  // —— 写回配置：合并全部 providers（仅新增，不覆盖原有）——
+  config["proxy-groups"]   = [...baseProxyGroups, ...dynamicServiceGroups, ...manualRegionGroups, ...autoRegionGroups];
+  config["rule-providers"] = { 
+    ...staticRuleProviders, 
+    ...dynamicRuleProviders, 
+    ...lsExtraProviders,
+    ...bmRuleProviders 
+  };
+
+  // —— blackmatrix7 新增规则（全部走 HK-BEUP® ISP），保持原顺序插入 —— 
+  const bmRules = [
+    "RULE-SET,youtube,HK-BEUP® ISP",
+    "RULE-SET,twitter,HK-BEUP® ISP",
+    "RULE-SET,tiktok,HK-BEUP® ISP",
+    "RULE-SET,discord,HK-BEUP® ISP",
+    "RULE-SET,wikipedia,HK-BEUP® ISP",
+    "RULE-SET,gitlab,HK-BEUP® ISP",
+    "RULE-SET,cloudflare,HK-BEUP® ISP",
+    "RULE-SET,paypal,HK-BEUP® ISP",
+    "RULE-SET,reddit,HK-BEUP® ISP",
+    "RULE-SET,spotify,HK-BEUP® ISP",
+    "RULE-SET,steam,HK-BEUP® ISP",
+    "RULE-SET,epic,HK-BEUP® ISP",
+    "RULE-SET,onedrive,HK-BEUP® ISP",
+    "RULE-SET,dropbox,HK-BEUP® ISP"
+  ];
+
+  // —— Loyalsoldier 新增规则 —— 
+  // 按你的分流意图：Apple/iCloud 直连；google 列表遵循你现有的 Google 组（该组已走 HK-BEUP® ISP）；
+  // tld-not-cn、telegramcidr 走主选择器 HK-BEUP® ISP（可用性优先）
+  const lsRules = [
+    "RULE-SET,icloud,DIRECT",
+    "RULE-SET,applecn,DIRECT",
+    "RULE-SET,googled,Google",         // 你的 Google 组已存在，保持逻辑一致
+    "RULE-SET,tld_not_cn,HK-BEUP® ISP",
+    "RULE-SET,telegramcidr,HK-BEUP® ISP"
+  ];
+
+  // 规则装配：顶 -> 动态服务 -> blackmatrix7 -> Loyalsoldier 扩展 -> 底
+  config["rules"] = [
+    ...staticRules.top,
+    ...dynamicRules,
+    ...bmRules,
+    ...lsRules,
+    ...staticRules.bottom
+  ];
+
+  // DNS
+  config["dns"] = dnsConfig;
+
+  // 统一开启 UDP
+  config["proxies"].forEach(proxy => { proxy.udp = true; });
+
+  return config;
+}
