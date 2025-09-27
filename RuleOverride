@@ -306,7 +306,7 @@ function main(config) {
         interval: 600,
         tolerance: 100,
         proxies: nodesInRegion,
-        hidden: false,      // 改为可见
+        hidden: true,      // 改为可见
         lazy: false,        // 强制定期测速（不懒加载）
         icon: "https://raw.githubusercontent.com/clash-verge-rev/clash-verge-rev.github.io/refs/heads/main/docs/assets/icons/balance.svg"
       });
@@ -332,21 +332,27 @@ function main(config) {
 
     if (hasSpecificRegions) {
       const regionalNodes = getNodeNames(allProxyNames, service.regions);
-      service.regions.forEach(key => {
-        if (allManualRegionGroupNames.includes(`${key}-手动选择`)) {
-          availableProxies.push(`${key}-手动选择`);
-          optionsFound = true;
-        }
-      });
+			service.regions.forEach(key => {
+			  // 已有：接入手动选择
+			  if (allManualRegionGroupNames.includes(`${key}-手动选择`)) {
+			    availableProxies.push(`${key}-手动选择`);
+			    optionsFound = true;
+			  }
+			  // 新增：接入自动选择
+			  if (allAutoRegionGroupNames.includes(`${key}-自动选择`)) {
+			    availableProxies.push(`${key}-自动选择`);
+			    optionsFound = true;
+			  }
+			});
       if (regionalNodes.length > 0) {
         availableProxies.push(...regionalNodes);
         optionsFound = true;
       }
       if (!optionsFound) hasSpecificRegions = false;
     }
-    if (!hasSpecificRegions) {
-      availableProxies.push("手动选择", ...allProxyNames);
-    }
+		if (!hasSpecificRegions) {
+		  availableProxies.push("手动选择", ...allAutoRegionGroupNames, ...allProxyNames);
+		}
 
     dynamicServiceGroups.push({
       ...groupBaseOption,
