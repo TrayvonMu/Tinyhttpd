@@ -306,7 +306,8 @@ function main(config) {
         interval: 600,
         tolerance: 100,
         proxies: nodesInRegion,
-        hidden: true
+        hidden: true,
+        icon: "https://github.com/clash-verge-rev/clash-verge-rev.github.io/blob/main/docs/assets/icons/adjust.svg"
       });
     }
   });
