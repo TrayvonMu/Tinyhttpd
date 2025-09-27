@@ -306,7 +306,7 @@ function main(config) {
         interval: 600,
         tolerance: 100,
         proxies: nodesInRegion,
-        hidden: false,      // 改为可见
+        hidden: true,      // 改为可见
         lazy: false,        // 强制定期测速（不懒加载）
         icon: "https://raw.githubusercontent.com/clash-verge-rev/clash-verge-rev.github.io/refs/heads/main/docs/assets/icons/balance.svg"
       });
