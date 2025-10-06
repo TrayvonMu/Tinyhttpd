@@ -378,6 +378,7 @@ function main(config) {
   const nodeSelectionProxies = ["手动选择", "延迟选优", "故障转移"];
   if (chainLandingProxies && chainLandingProxies.length > 0) nodeSelectionProxies.push(chainLandingName);
   nodeSelectionProxies.push(...allManualRegionGroupNames);
+  nodeSelectionProxies.push(...allAutoRegionGroupNames); // 新增自动选择
 
   let baseProxyGroups = [
     { ...groupBaseOption, name: "HK-BEUP® ISP", type: "select", proxies: nodeSelectionProxies, icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/adjust.svg" },
