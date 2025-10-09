@@ -1,12 +1,12 @@
 /**
- * Clash-Verge-Rev 全局扩展脚本（优化版 v2.5）
+ * Clash-Verge-Rev 全局扩展脚本（优化版 v2.6）
  * 
  * 核心优化：
  * 1. HK-BEUP® ISP 包含所有自动选择组
  * 2. 服务组统一使用"手动选择"（全量节点）
  * 3. 服务组顺序：主选择器 → 手动选择 → 自动选择 → 全量节点
  * 4. 自动选择组隐藏（hidden: true）
- * 5. 新增 Emby 规则（仅 5 个自动选择组）
+ * 5. Emby 规则（6 个自动选择组，含专线自动选择）
  */
 
 // ===================================================================================
@@ -15,6 +15,14 @@
 const EXCLUDED_KEYWORDS = [
   '官网', '到期', '流量', '剩余', '时间', '重置', '订阅', '卡顿',
   '距离下次重置剩余', '套餐到期', '导航'
+];
+
+// Emby 专线节点（仅用于 e.beupisp.com）
+const EMBY_EXCLUSIVE_KEYWORDS = [
+  '🎬 Emby 01 x 0.2',
+  '🎬 Emby 02 x 0.2',
+  '🎬 Emby 03 x 0.2',
+  '🎬 Emby 04 x 0.2'
 ];
 
 const CustomizationRule = [
@@ -45,7 +53,7 @@ const ENABLED_SERVICES = {
     regions: ["US"],
     rule: {
       providerKey: "openai",
-      url: "https://fastly.jsdelivr.net/gh/blackmatrix7/ios"
+      url: "https://fastly.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/OpenAI/OpenAI.yaml"
     }
   },
   anthropic: {
@@ -56,7 +64,7 @@ const ENABLED_SERVICES = {
     regions: ["US"],
     rule: {
       providerKey: "anthropic",
-      url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/anthropic.yaml"
+      url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Anthropic/Anthropic.yaml"
     }
   },
   telegram: {
@@ -67,7 +75,7 @@ const ENABLED_SERVICES = {
     regions: ["SG"],
     rule: {
       providerKey: "telegram",
-      url: "https://raw.githubusercontent.com/blackmatrix7/ios",
+      url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Telegram/Telegram.yaml",
       options: "no-resolve"
     }
   },
@@ -79,7 +87,7 @@ const ENABLED_SERVICES = {
     regions: ["HK"],
     rule: {
       providerKey: "github",
-      url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/github.yaml"
+      url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/GitHub/GitHub.yaml"
     }
   },
   google: {
@@ -90,18 +98,18 @@ const ENABLED_SERVICES = {
     regions: ["US"],
     rule: {
       providerKey: "google",
-      url: "https://raw.githubusercontent.com/blackmatrix7/ios"
+      url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Google/Google.yaml"
     }
   },
   microsoft: {
     enabled: true,
     allowDirect: true,
     groupName: "MicroSoft",
-    icon: "https://www.clashverge.dev/assets/icons/microsoft.svg",
+    icon: "https://clashverge.dev/assets/icons/microsoft.svg",
     regions: [],
     rule: {
       providerKey: "microsoft",
-      url: "https://raw.githubusercontent.com/blackmatrix7/ios"
+      url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Microsoft/Microsoft.yaml"
     }
   },
   apple: {
@@ -112,7 +120,7 @@ const ENABLED_SERVICES = {
     regions: [],
     rule: {
       providerKey: "apple",
-      url: "https://raw.githubusercontent.com/blackmatrix7/ios"
+      url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Apple/Apple_Classical.yaml"
     }
   },
   netflix: {
@@ -123,7 +131,7 @@ const ENABLED_SERVICES = {
     regions: ["HK"],
     rule: {
       providerKey: "netflix",
-      url: "https://raw.githubusercontent.com/blackmatrix7/ios"
+      url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Netflix/Netflix_Classical.yaml"
     }
   },
   emby: {
@@ -132,10 +140,10 @@ const ENABLED_SERVICES = {
     groupName: "Emby",
     icon: "https://www.svgrepo.com/show/306002/emby.svg",
     regions: ["HK", "JP", "TW", "US", "SG"],
-    isEmby: true,  // 标记为 Emby 特殊处理
+    isEmby: true,
     rule: {
       providerKey: "emby",
-      url: "135"
+      url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Emby/Emby.yaml"
     }
   }
 };
@@ -144,12 +152,12 @@ const ENABLED_SERVICES = {
 // 4. 区域枚举
 // ===================================================================================
 const REGIONS = {
-  HK: { name: "香港", regex: /香港|HK|Hong|🇭🇰/, icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/flags/hk.svg" },
-  MO: { name: "澳门", regex: /澳门|澳門|MO|Macau|Macao|🇲🇴/, icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/flags/mo.svg" },
-  TW: { name: "台湾", regex: /台湾|TW|Taiwan|Wan|🇨🇳|🇹🇼/, icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/flags/tw.svg" },
-  SG: { name: "新加坡", regex: /新加坡|狮城|SG|Singapore|🇸🇬/, icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/flags/sg.svg" },
-  JP: { name: "日本", regex: /日本|JP|Japan|🇯🇵/, icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/flags/jp.svg" },
-  US: { name: "美国", regex: /美国|US|United States|America|🇺🇸/, icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/flags/us.svg" },
+  HK: { name: "香港", regex: /香港|HK|Hong|🇭🇰/, icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Hong_Kong.png" },
+  MO: { name: "澳门", regex: /澳门|澳門|MO|Macau|Macao|🇲🇴/, icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Macao.png" },
+  TW: { name: "台湾", regex: /台湾|TW|Taiwan|Wan|🇨🇳|🇹🇼/, icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Taiwan.png" },
+  SG: { name: "新加坡", regex: /新加坡|狮城|SG|Singapore|🇸🇬/, icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Singapore.png" },
+  JP: { name: "日本", regex: /日本|JP|Japan|🇯🇵/, icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Japan.png" },
+  US: { name: "美国", regex: /美国|US|United States|America|🇺🇸/, icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/United_States.png" },
 };
 
 // ===================================================================================
@@ -159,7 +167,7 @@ const chainLandingName = "链式落地";
 const groupBaseOption = {
   interval: 0,
   timeout: 3000,
-  url: "http://www.gstatic.com/generate",
+  url: "http://www.gstatic.com/generate_204",
   lazy: true,
   "max-failed-times": 3,
   hidden: false
@@ -179,8 +187,8 @@ const staticRuleProviders = {
   cncidr: { ...ruleProviderCommon, behavior: "ipcidr", url: "https://fastly.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/cncidr.txt", path: "./ruleset/loyalsoldier/cncidr.yaml" },
   lancidr: { ...ruleProviderCommon, behavior: "ipcidr", url: "https://fastly.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/lancidr.txt", path: "./ruleset/loyalsoldier/lancidr.yaml" },
   applications: { ...ruleProviderCommon, behavior: "classical", url: "https://fastly.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/applications.txt", path: "./ruleset/loyalsoldier/applications.yaml" },
-  private: { ...ruleProviderCommon, behavior: "domain", url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/private.yaml", path: "./ruleset/MetaCubeX/private.yaml" },
-  gfw: { ...ruleProviderCommon, behavior: "domain", url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/classical/gfw.yaml", path: "./ruleset/MetaCubeX/gfw.yaml" },
+  private: { ...ruleProviderCommon, behavior: "domain", url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/private.yaml", path: "./ruleset/MetaCubeX/private.yaml" },
+  gfw: { ...ruleProviderCommon, behavior: "domain", url: "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/gfw.yaml", path: "./ruleset/MetaCubeX/gfw.yaml" },
 };
 
 // Loyalsoldier 扩展 providers
@@ -194,20 +202,20 @@ const lsExtraProviders = {
 
 // blackmatrix7 常用服务
 const bmRuleProviders = {
-  youtube: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios" },
-  twitter: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios" },
-  tiktok: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios" },
-  discord: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios" },
-  wikipedia: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios" },
-  gitlab: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios" },
-  cloudflare: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios" },
-  paypal: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios" },
-  reddit: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios" },
-  spotify: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios" },
-  steam: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios" },
-  epic: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios" },
-  onedrive: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios" },
-  dropbox: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/xxxx/global.yaml/blackmatrix7/ios" }
+  youtube: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/YouTube/YouTube.yaml" },
+  twitter: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Twitter/Twitter.yaml" },
+  tiktok: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/TikTok/TikTok.yaml" },
+  discord: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Discord/Discord.yaml" },
+  wikipedia: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Wikipedia/Wikipedia.yaml" },
+  gitlab: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/GitLab/GitLab.yaml" },
+  cloudflare: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Cloudflare/Cloudflare.yaml" },
+  paypal: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/PayPal/PayPal.yaml" },
+  reddit: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Reddit/Reddit.yaml" },
+  spotify: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Spotify/Spotify.yaml" },
+  steam: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Steam/Steam.yaml" },
+  epic: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Epic/Epic.yaml" },
+  onedrive: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/OneDrive/OneDrive.yaml" },
+  dropbox: { ...ruleProviderCommon, behavior: "classical", url: "https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Clash/Dropbox/Dropbox.yaml" }
 };
 
 // 静态规则
@@ -308,14 +316,23 @@ function main(config) {
 
   const allProxyNames = config.proxies.map(p => p.name);
   const chainProxiesName = chainLandingProxies.map(p => p.name);
-  const regionNodeCache = buildRegionNodeCache(allProxyNames);
 
-  // 地区代理组
+  // 分离 Emby 专线节点和通用节点
+  const embyExclusiveNodes = allProxyNames.filter(name =>
+    EMBY_EXCLUSIVE_KEYWORDS.some(keyword => name === keyword)
+  );
+  const generalProxyNames = allProxyNames.filter(name =>
+    !EMBY_EXCLUSIVE_KEYWORDS.some(keyword => name === keyword)
+  );
+
+  const regionNodeCache = buildRegionNodeCache(generalProxyNames);
+
+  // 地区代理组（使用通用节点）
   const manualRegionGroups = [];
   const autoRegionGroups = [];
 
   Object.keys(REGIONS).forEach(key => {
-    const nodesInRegion = getNodeNames(allProxyNames, [key]);
+    const nodesInRegion = getNodeNames(generalProxyNames, [key]);
     if (nodesInRegion.length > 0) {
       manualRegionGroups.push({
         ...groupBaseOption,
@@ -329,13 +346,13 @@ function main(config) {
         ...groupBaseOption,
         name: `${key}-自动选择`,
         type: 'url-test',
-        url: "http://www.gstatic.com/generate",
+        url: "http://www.gstatic.com/generate_204",
         interval: 600,
         tolerance: 100,
         proxies: nodesInRegion,
         hidden: true,
         lazy: false,
-        icon: "https://raw.githubusercontent.com/clash-verge-rev/clash-verge-rev.github.io/refs/heads/main/docs/assets/icons/balance.svg"
+        icon: "https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Auto.png"
       });
     }
   });
@@ -346,8 +363,8 @@ function main(config) {
   // Emby 专用自动选择组
   const embyAutoGroups = [];
 
-  // 日本 01-04 自动选择
-  const jpEmbyNodes = allProxyNames.filter(name => {
+  // 日本 01-04 自动选择（使用通用节点）
+  const jpEmbyNodes = generalProxyNames.filter(name => {
     if (!REGIONS.JP.regex.test(name)) return false;
     return /[-\s]?0[1-4](?:\D|$)/.test(name);
   });
@@ -356,18 +373,18 @@ function main(config) {
       ...groupBaseOption,
       name: "JP(01-04)-自动选择",
       type: 'url-test',
-      url: "http://www.gstatic.com/generate",
+      url: "http://www.gstatic.com/generate_204",
       interval: 600,
       tolerance: 100,
       proxies: jpEmbyNodes,
       hidden: true,
       lazy: false,
-      icon: "https://raw.githubusercontent.com/clash-verge-rev/clash-verge-rev.github.io/refs/heads/main/docs/assets/icons/balance.svg"
+      icon: "https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Auto.png"
     });
   }
 
-  // 台湾 05-08 自动选择
-  const twEmbyNodes = allProxyNames.filter(name => {
+  // 台湾 05-08 自动选择（使用通用节点）
+  const twEmbyNodes = generalProxyNames.filter(name => {
     if (!REGIONS.TW.regex.test(name)) return false;
     return /[-\s]?0[5-8](?:\D|$)/.test(name);
   });
@@ -376,13 +393,29 @@ function main(config) {
       ...groupBaseOption,
       name: "TW(05-08)-自动选择",
       type: 'url-test',
-      url: "http://www.gstatic.com/generate",
+      url: "http://www.gstatic.com/generate_204",
       interval: 600,
       tolerance: 100,
       proxies: twEmbyNodes,
       hidden: true,
       lazy: false,
-      icon: "https://raw.githubusercontent.com/clash-verge-rev/clash-verge-rev.github.io/refs/heads/main/docs/assets/icons/balance.svg"
+      icon: "https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Auto.png"
+    });
+  }
+
+  // 新增：Emby 专线自动选择（仅 4 条专线，专用测速地址）
+  if (embyExclusiveNodes.length > 0) {
+    embyAutoGroups.push({
+      ...groupBaseOption,
+      name: "Emby专线-自动选择",
+      type: 'url-test',
+      url: "http://e.beupisp.com/generate_204",
+      interval: 600,
+      tolerance: 100,
+      proxies: embyExclusiveNodes,
+      hidden: true,
+      lazy: false,
+      icon: "https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Auto.png"
     });
   }
 
@@ -410,8 +443,12 @@ function main(config) {
       if (allAutoRegionGroupNames.includes("SG-自动选择")) {
         availableProxies.push("SG-自动选择");
       }
+      // 新增：Emby 专线自动选择
+      if (embyExclusiveNodes.length > 0) {
+        availableProxies.push("Emby专线-自动选择");
+      }
     } else {
-      // 其他服务的正常逻辑
+      // 其他服务的正常逻辑（使用通用节点）
       availableProxies = ["HK-BEUP® ISP"];
       if (service.allowDirect) availableProxies.unshift("DIRECT");
 
@@ -428,7 +465,7 @@ function main(config) {
         availableProxies.push(...allAutoRegionGroupNames);
       }
 
-      availableProxies.push(...allProxyNames);
+      availableProxies.push(...generalProxyNames);
     }
 
     dynamicServiceGroups.push({
@@ -451,7 +488,7 @@ function main(config) {
     dynamicRules.push(ruleString);
   }
 
-  // 基础分流组（HK-BEUP® ISP 加入所有自动选择）
+  // 基础分流组（HK-BEUP® ISP 加入所有自动选择，使用通用节点）
   const nodeSelectionProxies = [
     "手动选择",
     "延迟选优",
@@ -465,18 +502,18 @@ function main(config) {
   }
 
   let baseProxyGroups = [
-    { ...groupBaseOption, name: "HK-BEUP® ISP", type: "select", proxies: nodeSelectionProxies, icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/adjust.svg" },
-    { ...groupBaseOption, name: "手动选择", type: "select", proxies: allProxyNames, icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/link.svg" },
-    { ...groupBaseOption, name: "延迟选优", type: "url-test", tolerance: 100, interval: 600, lazy: false, proxies: allProxyNames, icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/speed.svg" },
-    { ...groupBaseOption, name: "故障转移", type: "fallback", interval: 600, lazy: false, proxies: allProxyNames, icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/ambulance.svg" },
-    { ...groupBaseOption, name: "广告过滤", type: "select", proxies: ["REJECT", "DIRECT"], icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/bug.svg" },
-    { ...groupBaseOption, name: "漏网之鱼", type: "select", proxies: ["HK-BEUP® ISP", "DIRECT", ...allAutoRegionGroupNames, "手动选择"], icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/fish.svg" },
+    { ...groupBaseOption, name: "HK-BEUP® ISP", type: "select", proxies: nodeSelectionProxies, icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Proxy.png" },
+    { ...groupBaseOption, name: "手动选择", type: "select", proxies: generalProxyNames, icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Static.png" },
+    { ...groupBaseOption, name: "延迟选优", type: "url-test", tolerance: 100, interval: 600, lazy: false, proxies: generalProxyNames, icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Auto.png" },
+    { ...groupBaseOption, name: "故障转移", type: "fallback", interval: 600, lazy: false, proxies: generalProxyNames, icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Bypass.png" },
+    { ...groupBaseOption, name: "广告过滤", type: "select", proxies: ["REJECT", "DIRECT"], icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Advertising.png" },
+    { ...groupBaseOption, name: "漏网之鱼", type: "select", proxies: ["HK-BEUP® ISP", "DIRECT", ...allAutoRegionGroupNames, "手动选择"], icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Final.png" },
   ];
 
   if (chainLandingProxies && chainLandingProxies.length > 0) {
     baseProxyGroups.push(
-      { ...groupBaseOption, name: chainLandingName, type: "select", proxies: chainProxiesName, icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/adjust.svg" },
-      { ...groupBaseOption, name: chainTransitName, type: "select", proxies: allProxyNames.filter(p => !chainProxiesName.includes(p)), icon: "https://fastly.jsdelivr.net/gh/clash-verge-rev/clash-verge-rev.github.io@main/docs/assets/icons/adjust.svg" }
+      { ...groupBaseOption, name: chainLandingName, type: "select", proxies: chainProxiesName, icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Proxy.png" },
+      { ...groupBaseOption, name: chainTransitName, type: "select", proxies: generalProxyNames.filter(p => !chainProxiesName.includes(p)), icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Proxy.png" }
     );
   }
 
